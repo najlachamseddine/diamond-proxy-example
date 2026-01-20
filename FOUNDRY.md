@@ -116,25 +116,176 @@ forge script script/Deploy.s.sol:DiamondDeployScript \
 
 ## Upgrading the Diamond
 
-### Upgrade Example 1: Replace Facet Functions
+The `Upgrade.s.sol` script demonstrates three types of Diamond upgrades. You can enable different upgrade examples by commenting/uncommenting the function calls in the `run()` function.
+
+### Deployment Command
+
+First, deploy your Diamond:
 
 ```bash
-export DIAMOND_ADDRESS=0x...
-export PRIVATE_KEY=0x...
+source .env
 
-forge script script/Upgrade.s.sol:DiamondUpgradeScript \
-  --rpc-url localhost \
+# Deploy to local testnet (Anvil)
+forge script script/Deploy.s.sol:DiamondDeployScript \
+  --rpc-url http://localhost:8545 \
   --broadcast
+
+# Deploy to Sepolia testnet
+forge script script/Deploy.s.sol:DiamondDeployScript \
+  --rpc-url sepolia \
+  --broadcast \
+  --verify
 ```
 
-### Upgrade Example 2: With Initialization
+Save the deployed Diamond address for upgrades.
 
-Use the `UpgradeWithInitScript` in `Upgrade.s.sol`:
+### Upgrade Example 1: Replace Facet Functions (`upgradeCounterFacet`)
+
+**What it does:** Deploys a new version of CounterFacet and replaces existing function implementations. This is useful when you want to fix bugs or improve existing functionality while preserving the Diamond's state.
+
+**How it works:**
+- Deploys a new CounterFacet contract with updated code
+- Uses `FacetCutAction.Replace` to swap out the old implementations
+- All existing function selectors now point to the new facet address
+- Diamond storage (like the counter value) is preserved
+
+**Command:**
+
+```bash
+source .env
+export DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
+
+# Edit script/Upgrade.s.sol to enable upgradeCounterFacet():
+# Uncomment: upgradeCounterFacet();
+# Comment out: addNewFacet(); and removeFunctions();
+
+# Run the upgrade
+forge script script/Upgrade.s.sol:DiamondUpgradeScript \
+  --rpc-url sepolia \
+  --broadcast
+
+# Verify the upgrade worked
+cast call $DIAMOND_ADDRESS "counterFacetNewFunction()(string)" --rpc-url sepolia
+cast call $DIAMOND_ADDRESS "getCounter()(uint256)" --rpc-url sepolia
+```
+
+**Use cases:**
+- Bug fixes in existing functions
+- Performance improvements
+- Logic updates while maintaining the same interface
+- Changing return messages or event data
+
+### Upgrade Example 2: Add New Facet (`addNewFacet`)
+
+**What it does:** Deploys a completely new facet (Counter2Facet) and adds new functions to the Diamond. Existing functions are not affected.
+
+**How it works:**
+- Deploys Counter2Facet with new functions
+- Uses `FacetCutAction.Add` to register new function selectors
+- New functions become callable through the Diamond
+- Existing facets remain unchanged
+
+**Command:**
+
+```bash
+source .env
+export DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
+
+# Edit script/Upgrade.s.sol to enable addNewFacet():
+# Comment out: upgradeCounterFacet(); and removeFunctions();
+# Uncomment: addNewFacet();
+
+# Run the upgrade
+forge script script/Upgrade.s.sol:DiamondUpgradeScript \
+  --rpc-url sepolia \
+  --broadcast
+
+# Verify the new function was added
+cast call $DIAMOND_ADDRESS "counterFacetNewFunction2()(string)" --rpc-url sepolia
+
+# Check all facets
+cast call $DIAMOND_ADDRESS "facets()(tuple(address,bytes4[])[])" --rpc-url sepolia
+```
+
+**Use cases:**
+- Adding new features to your protocol
+- Extending functionality without touching existing code
+- Modular architecture (e.g., adding governance, staking, rewards)
+- Breaking past the 24KB contract size limit
+
+### Upgrade Example 3: Remove Functions (`removeFunctions`)
+
+**What it does:** Removes specific functions from the Diamond, making them no longer callable. Useful for deprecating features or removing vulnerable code.
+
+**How it works:**
+- Uses `FacetCutAction.Remove` with function selectors
+- Facet address must be `address(0)` for remove operations
+- Function selectors are deleted from the Diamond's mapping
+- Calling removed functions will revert
+
+**Command:**
+
+```bash
+source .env
+export DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
+
+# Edit script/Upgrade.s.sol to enable removeFunctions():
+# Comment out: upgradeCounterFacet(); and addNewFacet();
+# Uncomment: removeFunctions();
+
+# Run the upgrade (removes resetCounter function)
+forge script script/Upgrade.s.sol:DiamondUpgradeScript \
+  --rpc-url sepolia \
+  --broadcast
+
+# Verify function is removed (should fail)
+cast call $DIAMOND_ADDRESS "resetCounter()" --rpc-url sepolia
+# Expected: Error - function selector not found
+
+# Check remaining functions
+cast call $DIAMOND_ADDRESS "facetFunctionSelectors(address)(bytes4[])" \
+  0x1044BFbd1d954a4E0998AAb6dCfEE9a9c077170F \
+  --rpc-url sepolia
+```
+
+**Use cases:**
+- Deprecating old features
+- Removing vulnerable functions quickly
+- Cleaning up unused code
+- Emergency response to security issues
+
+### Upgrade with Initialization
+
+For complex upgrades that require state initialization:
 
 ```bash
 forge script script/Upgrade.s.sol:UpgradeWithInitScript \
   --rpc-url localhost \
   --broadcast
+```
+
+This runs custom initialization logic during the `diamondCut` call.
+
+### Complete Upgrade Workflow
+
+```bash
+# 1. Deploy Diamond
+source .env
+forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url sepolia --broadcast
+
+# 2. Save the Diamond address
+export DIAMOND_ADDRESS=0x... # from deployment output
+
+# 3. Interact with it
+cast call $DIAMOND_ADDRESS "getCounter()(uint256)" --rpc-url sepolia
+cast send $DIAMOND_ADDRESS "increment()" --rpc-url sepolia --private-key $PRIVATE_KEY
+
+# 4. Upgrade (choose your upgrade type in Upgrade.s.sol)
+forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
+
+# 5. Verify upgrade
+cast call $DIAMOND_ADDRESS "facets()(tuple(address,bytes4[])[])" --rpc-url sepolia
+cast call $DIAMOND_ADDRESS "counterFacetNewFunction()(string)" --rpc-url sepolia
 ```
 
 ## Verification

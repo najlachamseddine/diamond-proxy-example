@@ -64,6 +64,6 @@ contract CounterFacet {
 
     function counterFacetNewFunction() external returns (string memory) {
         emit CounterNewSelectorAdded();
-        return "This is a new function added in an upgrade";
+        return "This is a new function added in an upgrade: TEST if upgrade worked";
     }
 }

@@ -46,13 +46,13 @@ contract DiamondUpgradeScript is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Example 1: Replace existing Counter functions with new implementation
-        // upgradeCounterFacet();
+        upgradeCounterFacet();
 
         // Example 2: Add a completely new facet (uncomment to use)
         // addNewFacet();
 
         // Example 3: Remove specific functions (uncomment to use)
-        removeFunctions();
+        // removeFunctions();
 
         vm.stopBroadcast();
 
@@ -73,10 +73,10 @@ contract DiamondUpgradeScript is Script {
         
         // Get selectors for existing and new functions
         bytes4[] memory existingSelectors = getExistingCounterSelectors();
-        bytes4[] memory newSelectors = getNewCounterSelectors();
+        // bytes4[] memory newSelectors = getNewCounterSelectors();
         
         // Prepare the facet cuts: Replace existing, Add new
-        IDiamondCut.FacetCut[] memory cuts = new IDiamondCut.FacetCut[](2);
+        IDiamondCut.FacetCut[] memory cuts = new IDiamondCut.FacetCut[](1);
         
         // Replace existing functions
         cuts[0] = IDiamondCut.FacetCut({
@@ -86,11 +86,11 @@ contract DiamondUpgradeScript is Script {
         });
         
         // Add new function
-        cuts[1] = IDiamondCut.FacetCut({
-            facetAddress: address(newCounterFacet),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: newSelectors
-        });
+        // cuts[1] = IDiamondCut.FacetCut({
+        //     facetAddress: address(newCounterFacet),
+        //     action: IDiamondCut.FacetCutAction.Add,
+        //     functionSelectors: newSelectors
+        // });
         
         // Execute the diamond cut
         DiamondCutFacet diamondCut = DiamondCutFacet(diamondAddress);
@@ -98,7 +98,7 @@ contract DiamondUpgradeScript is Script {
         
         console.log("Counter functions replaced successfully");
         console.log("Replaced", existingSelectors.length, "existing function selectors");
-        console.log("Added", newSelectors.length, "new function selectors\n");
+        // console.log("Added", newSelectors.length, "new function selectors\n");
     }
 
     /**
@@ -200,7 +200,7 @@ contract DiamondUpgradeScript is Script {
         selectors[1] = CounterFacet.increment.selector;
         selectors[2] = CounterFacet.decrement.selector;
         selectors[3] = CounterFacet.incrementBy.selector;
-        selectors[4] = CounterFacet.resetCounter.selector;
+        selectors[4] = CounterFacet.counterFacetNewFunction.selector;
         return selectors;
     }
 
