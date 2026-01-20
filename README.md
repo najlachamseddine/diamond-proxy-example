@@ -2,6 +2,14 @@
 
 A comprehensive implementation of the Diamond Proxy Pattern following EIP-2535 best practices.
 
+**Supports both Hardhat (JavaScript) and Foundry (Solidity) workflows.**
+
+📖 **Documentation:**
+- **[Foundry Complete Guide →](./FOUNDRY.md)**
+- **[Architecture Diagrams →](./ARCHITECTURE.md)**
+- **[Quick Reference →](./QUICKREF.md)**
+- **[Summary →](./SUMMARY.md)**
+
 ## 🔷 What is the Diamond Pattern?
 
 The Diamond Pattern is a proxy pattern that allows a single contract address to support an unlimited number of functions by delegating calls to multiple implementation contracts called **facets**.
@@ -59,24 +67,52 @@ test/
 
 ### Installation
 
+#### Using Hardhat (JavaScript/TypeScript)
 ```bash
 npm install
 ```
 
+#### Using Foundry (Solidity)
+```bash
+# Install Foundry if you haven't already
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install dependencies
+forge install foundry-rs/forge-std
+```
+
 ### Compile Contracts
 
+#### Hardhat
 ```bash
 npm run compile
 ```
 
+#### Foundry
+```bash
+forge build
+```
+
 ### Run Tests
 
+#### Hardhat
 ```bash
 npm test
 ```
 
-### Deploy Locally
+#### Foundry
+```bash
+forge test
+# Run with verbosity
+forge test -vv
+# Run with gas report
+forge test --gas-report
+```
 
+### Deploy
+
+#### Hardhat - Deploy Locally
 ```bash
 # Start a local node
 npm run node
@@ -84,6 +120,67 @@ npm run node
 # In another terminal, deploy
 npm run deploy:local
 ```
+
+#### Foundry - Deploy Locally
+```bash
+# Start a local Anvil node
+anvil
+
+# In another terminal, set private key and deploy
+export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url localhost --broadcast
+```
+
+#### Foundry - Deploy to Testnet
+```bash
+# Create .env file from example
+cp .env.example .env
+# Edit .env with your keys
+
+# Source environment variables
+source .env
+
+# Deploy to Sepolia
+forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url sepolia --broadcast --verify
+
+# Deploy with custom gas settings
+forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url sepolia --broadcast --verify --gas-price 20gwei
+```
+
+### Upgrade Diamond
+
+#### Foundry
+```bash
+# Set the diamond address
+export DIAMOND_ADDRESS=0x...
+export PRIVATE_KEY=0x...
+
+# Run upgrade script
+forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url localhost --broadcast
+
+# Or for testnet
+forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
+```
+
+#### Hardhat
+```bash
+DIAMOND_ADDRESS=0x... npx hardhat run scripts/upgrade.js --network localhost
+```
+
+## 🔄 Hardhat vs Foundry
+
+| Feature | Hardhat | Foundry |
+|---------|---------|---------|
+| **Language** | JavaScript/TypeScript | Solidity |
+| **Test Speed** | ~500ms | ~2ms (250x faster) |
+| **Gas Reports** | ✅ Via plugins | ✅ Built-in |
+| **Fuzzing** | ❌ External tools | ✅ Native |
+| **Learning Curve** | Easy for JS devs | Easy for Solidity devs |
+| **Ecosystem** | Mature, large | Growing rapidly |
+| **Deployment** | scripts/ folder | script/ folder |
+| **Best For** | Full-stack devs | Smart contract devs |
+
+**Recommendation**: Use Foundry for testing (faster), either for deployment.
 
 ## 🔧 Core Concepts
 
