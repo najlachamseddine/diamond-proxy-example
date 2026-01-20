@@ -38,6 +38,19 @@ forge script script/Deploy.s.sol:DiamondDeployScript \
   --rpc-url $SEPOLIA_RPC_URL \
   --broadcast \
   --verify
+
+# Or with manual verification
+forge script script/Deploy.s.sol:DiamondDeployScript \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --broadcast
+
+# Then verify on Blockscout
+forge verify-contract \
+  --chain-id 11155111 \
+  --verifier blockscout \
+  --verifier-url https://eth-sepolia.blockscout.com/api \
+  DIAMOND_ADDRESS \
+  contracts/Diamond.sol:Diamond
 ```
 
 ### Upgrade
@@ -138,9 +151,9 @@ Counter:
 ```bash
 # .env file
 PRIVATE_KEY=your_private_key
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-ETHERSCAN_API_KEY=your_etherscan_key
+SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
 DIAMOND_ADDRESS=0x...
+# Note: Blockscout verification doesn't require an API key
 ```
 
 ## Troubleshooting

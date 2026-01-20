@@ -193,6 +193,19 @@ contract DiamondDeployScript is Script {
         return selectors;
     }
 
+
+    function getSelectorsForCounter2() internal pure returns (bytes4[] memory) {
+        bytes4[] memory selectors = new bytes4[](5);
+        selectors[0] = Counter2Facet.getCounter.selector;
+        selectors[1] = Counter2Facet.increment.selector;
+        selectors[2] = Counter2Facet.decrement.selector;
+        selectors[3] = Counter2Facet.incrementBy.selector;
+        selectors[4] = Counter2Facet.resetCounter.selector;
+        selectors[5] = Counter2Facet.counterFacetNewFunction.selector;
+        selectors[6] = Counter2Facet.counterFacetNewFunction2.selector;
+        return selectors;
+    }
+
     function getSelectorsForERC20() internal pure returns (bytes4[] memory) {
         bytes4[] memory selectors = new bytes4[](12);
         selectors[0] = ERC20Facet.initializeERC20.selector;

@@ -6,6 +6,7 @@ import "../contracts/Diamond.sol";
 import "../contracts/facets/DiamondCutFacet.sol";
 import "../contracts/facets/DiamondLoupeFacet.sol";
 import "../contracts/facets/CounterFacet.sol";
+import "../contracts/facets/Counter2Facet.sol";
 import "../contracts/libraries/LibDiamond.sol";
 
 /**
@@ -45,13 +46,13 @@ contract DiamondUpgradeScript is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Example 1: Replace existing Counter functions with new implementation
-        upgradeCounterFacet();
+        // upgradeCounterFacet();
 
         // Example 2: Add a completely new facet (uncomment to use)
         // addNewFacet();
 
         // Example 3: Remove specific functions (uncomment to use)
-        // removeFunctions();
+        removeFunctions();
 
         vm.stopBroadcast();
 
@@ -70,15 +71,25 @@ contract DiamondUpgradeScript is Script {
         CounterFacet newCounterFacet = new CounterFacet();
         console.log("New CounterFacet deployed to:", address(newCounterFacet));
         
-        // Get selectors for counter functions
-        bytes4[] memory selectors = getSelectorsForCounter();
+        // Get selectors for existing and new functions
+        bytes4[] memory existingSelectors = getExistingCounterSelectors();
+        bytes4[] memory newSelectors = getNewCounterSelectors();
         
-        // Prepare the facet cut for replacement
-        IDiamondCut.FacetCut[] memory cuts = new IDiamondCut.FacetCut[](1);
+        // Prepare the facet cuts: Replace existing, Add new
+        IDiamondCut.FacetCut[] memory cuts = new IDiamondCut.FacetCut[](2);
+        
+        // Replace existing functions
         cuts[0] = IDiamondCut.FacetCut({
             facetAddress: address(newCounterFacet),
             action: IDiamondCut.FacetCutAction.Replace,
-            functionSelectors: selectors
+            functionSelectors: existingSelectors
+        });
+        
+        // Add new function
+        cuts[1] = IDiamondCut.FacetCut({
+            facetAddress: address(newCounterFacet),
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: newSelectors
         });
         
         // Execute the diamond cut
@@ -86,7 +97,8 @@ contract DiamondUpgradeScript is Script {
         diamondCut.diamondCut(cuts, address(0), "");
         
         console.log("Counter functions replaced successfully");
-        console.log("Replaced", selectors.length, "function selectors\n");
+        console.log("Replaced", existingSelectors.length, "existing function selectors");
+        console.log("Added", newSelectors.length, "new function selectors\n");
     }
 
     /**
@@ -96,15 +108,14 @@ contract DiamondUpgradeScript is Script {
     function addNewFacet() internal {
         console.log("Example 2: Adding New Facet\n");
         
-        // For this example, we'll deploy another CounterFacet
-        // In practice, this would be a new contract with different functions
-        CounterFacet newFacet = new CounterFacet();
+        // Deploy Counter2Facet with new functions
+        Counter2Facet newFacet = new Counter2Facet();
         console.log("New facet deployed to:", address(newFacet));
         
-        // Get selectors (in practice, these would be NEW selectors not in diamond)
+        // Get selectors (these are NEW selectors not already in the diamond)
         bytes4[] memory selectors = new bytes4[](1);
-        // Example: add only one function from the new facet
-        selectors[0] = CounterFacet.getCounter.selector;
+        // Add the new function from Counter2Facet
+        selectors[0] = Counter2Facet.counterFacetNewFunction2.selector;
         
         IDiamondCut.FacetCut[] memory cuts = new IDiamondCut.FacetCut[](1);
         cuts[0] = IDiamondCut.FacetCut({
@@ -180,13 +191,39 @@ contract DiamondUpgradeScript is Script {
     /**
      * @dev Get all selectors for CounterFacet
      */
-    function getSelectorsForCounter() internal pure returns (bytes4[] memory) {
+    /**
+     * @dev Get selectors for existing counter functions
+     */
+    function getExistingCounterSelectors() internal pure returns (bytes4[] memory) {
         bytes4[] memory selectors = new bytes4[](5);
         selectors[0] = CounterFacet.getCounter.selector;
         selectors[1] = CounterFacet.increment.selector;
         selectors[2] = CounterFacet.decrement.selector;
         selectors[3] = CounterFacet.incrementBy.selector;
         selectors[4] = CounterFacet.resetCounter.selector;
+        return selectors;
+    }
+
+    /**
+     * @dev Get selectors for new counter functions
+     */
+    function getNewCounterSelectors() internal pure returns (bytes4[] memory) {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = CounterFacet.counterFacetNewFunction.selector;
+        return selectors;
+    }
+
+    /**
+     * @dev Get all selectors (for compatibility)
+     */
+    function getSelectorsForCounter() internal pure returns (bytes4[] memory) {
+        bytes4[] memory selectors = new bytes4[](6);
+        selectors[0] = CounterFacet.getCounter.selector;
+        selectors[1] = CounterFacet.increment.selector;
+        selectors[2] = CounterFacet.decrement.selector;
+        selectors[3] = CounterFacet.incrementBy.selector;
+        selectors[4] = CounterFacet.resetCounter.selector;
+        selectors[5] = CounterFacet.counterFacetNewFunction.selector;
         return selectors;
     }
 }

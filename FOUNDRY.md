@@ -88,8 +88,8 @@ forge script script/Deploy.s.sol:DiamondDeployScript \
 cp .env.example .env
 # Edit .env with your keys:
 # PRIVATE_KEY=your_private_key_without_0x
-# SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-# ETHERSCAN_API_KEY=your_etherscan_key
+# SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
+# Note: Blockscout doesn't require an API key
 ```
 
 2. Deploy:
@@ -139,7 +139,7 @@ forge script script/Upgrade.s.sol:UpgradeWithInitScript \
 
 ## Verification
 
-### Verify on Etherscan
+### Verify on Blockscout (Sepolia)
 
 During deployment:
 ```bash
@@ -149,7 +149,26 @@ forge script script/Deploy.s.sol:DiamondDeployScript \
   --verify
 ```
 
-After deployment:
+After deployment (manual verification):
+```bash
+forge verify-contract \
+  --chain-id 11155111 \
+  --compiler-version 0.8.20 \
+  --verifier blockscout \
+  --verifier-url https://eth-sepolia.blockscout.com/api \
+  ADDRESS \
+  contracts/Diamond.sol:Diamond
+```
+
+### Verify on Etherscan (Alternative)
+
+If you prefer Etherscan, update `foundry.toml`:
+```toml
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
+```
+
+Then verify:
 ```bash
 forge verify-contract \
   --chain-id 11155111 \

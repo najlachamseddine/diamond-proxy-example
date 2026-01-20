@@ -11,7 +11,8 @@ via_ir = false
 localhost = "http://127.0.0.1:8545"
 sepolia = "${SEPOLIA_RPC_URL}"
 
+# Blockscout verification (no API key needed)
 [etherscan]
-sepolia = { key = "${ETHERSCAN_API_KEY}" }
+sepolia = { key = "verifyContract", url = "https://eth-sepolia.blockscout.com/api" }
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

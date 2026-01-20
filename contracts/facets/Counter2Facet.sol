@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 
 /**
- * @title CounterFacet
- * @dev Simple example facet demonstrating the diamond pattern
+ * @title Counter2Facet
+ * @dev Extended counter facet with additional functions
  * 
- * This facet provides basic counter functionality to show
- * how facets can read and write to shared storage.
+ * This facet demonstrates how to add new functionality
+ * to an existing diamond through upgrades.
  */
-contract CounterFacet {
+contract Counter2Facet {
     
     event CounterIncremented(uint256 newValue);
     event CounterDecremented(uint256 newValue);
@@ -65,5 +65,11 @@ contract CounterFacet {
     function counterFacetNewFunction() external returns (string memory) {
         emit CounterNewSelectorAdded();
         return "This is a new function added in an upgrade";
+    }
+
+
+    function counterFacetNewFunction2() external returns (string memory) {
+        emit CounterNewSelectorAdded();
+        return "This is a new function 2 added in an upgrade";
     }
 }
