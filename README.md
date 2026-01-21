@@ -251,6 +251,40 @@ struct FacetCut {
 
 ### Calling Diamond Functions
 
+#### Using Foundry (cast)
+
+```bash
+# Set your diamond address
+DIAMOND=0x59624aF30be972C6dbd57Cd89000336a289F7684
+
+# Read the counter value
+cast call $DIAMOND "getCounter()(uint256)" --rpc-url sepolia
+
+# Increment counter (requires sending transaction)
+cast send $DIAMOND "increment()" --rpc-url sepolia --private-key $PRIVATE_KEY
+
+# Increment by specific amount
+cast send $DIAMOND "incrementBy(uint256)" 10 --rpc-url sepolia --private-key $PRIVATE_KEY
+
+# Decrement counter
+cast send $DIAMOND "decrement()" --rpc-url sepolia --private-key $PRIVATE_KEY
+
+# Call function that returns string
+cast call $DIAMOND "counterFacetNewFunction()(string)" --rpc-url sepolia
+
+# Query which facet handles a function
+cast call $DIAMOND "facetAddress(bytes4)(address)" $(cast sig "getCounter()") --rpc-url sepolia
+
+# List all facets and their function selectors
+cast call $DIAMOND "facets()(tuple(address,bytes4[])[])" --rpc-url sepolia
+
+# Call function directly on facet (not through diamond)
+FACET=0xd12347c1FB663275C18c4Db387e58aBF017CeF73
+cast call $FACET "counterFacetNewFunction2()(string)" --rpc-url sepolia
+```
+
+#### Using Hardhat (JavaScript)
+
 ```javascript
 // Get facet interfaces attached to diamond
 const counter = await ethers.getContractAt("CounterFacet", diamondAddress);
@@ -265,6 +299,22 @@ await erc20.transfer(recipient, amount);
 ```
 
 ### Adding a New Facet
+
+#### Using Foundry
+
+```bash
+# Deploy and upgrade using the Upgrade script
+source .env
+DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
+
+# Run the upgrade script (adds Counter2Facet with new function)
+forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
+
+# Verify the new function was added
+cast call $DIAMOND_ADDRESS "counterFacetNewFunction2()(string)" --rpc-url sepolia
+```
+
+#### Using Hardhat
 
 ```javascript
 // Deploy new facet
@@ -289,6 +339,27 @@ await diamondCut.diamondCut(
 
 ### Upgrading a Facet
 
+#### Using Foundry
+
+```bash
+# Use the upgradeCounterFacet() function in Upgrade.s.sol
+# This replaces existing CounterFacet functions with new implementation
+
+# Edit script/Upgrade.s.sol to enable upgradeCounterFacet():
+# Uncomment: upgradeCounterFacet();
+# Comment out: addNewFacet();
+
+# Run the upgrade
+source .env
+DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
+forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
+
+# Verify state is preserved after upgrade
+cast call $DIAMOND_ADDRESS "getCounter()(uint256)" --rpc-url sepolia
+```
+
+#### Using Hardhat
+
 ```javascript
 // Deploy updated facet
 const UpdatedFacet = await ethers.getContractFactory("UpdatedCounterFacet");
@@ -308,6 +379,22 @@ await diamondCut.diamondCut(
 
 ### Removing Functions
 
+#### Using Foundry
+
+```bash
+# Use the removeFunctions() function in Upgrade.s.sol
+# Edit script/Upgrade.s.sol to enable removeFunctions():
+# Uncomment: removeFunctions();
+
+# This will remove the resetCounter function from the diamond
+forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
+
+# Verify function is removed (should fail)
+cast call $DIAMOND_ADDRESS "resetCounter()" --rpc-url sepolia
+```
+
+#### Using Hardhat
+
 ```javascript
 await diamondCut.diamondCut(
     [{
@@ -321,6 +408,31 @@ await diamondCut.diamondCut(
 ```
 
 ### Querying the Diamond (Loupe)
+
+#### Using Foundry
+
+```bash
+DIAMOND=0x59624aF30be972C6dbd57Cd89000336a289F7684
+
+# Get all facets and their function selectors
+cast call $DIAMOND "facets()(tuple(address,bytes4[])[])" --rpc-url sepolia
+
+# Get all facet addresses
+cast call $DIAMOND "facetAddresses()(address[])" --rpc-url sepolia
+
+# Get which facet handles a specific function
+cast call $DIAMOND "facetAddress(bytes4)(address)" $(cast sig "getCounter()") --rpc-url sepolia
+
+# Get all function selectors for a specific facet
+FACET_ADDR=0x1044BFbd1d954a4E0998AAb6dCfEE9a9c077170F
+cast call $DIAMOND "facetFunctionSelectors(address)(bytes4[])" $FACET_ADDR --rpc-url sepolia
+
+# Get function signature from selector
+cast sig "counterFacetNewFunction()"
+# Output: 0x12345678... (the bytes4 selector)
+```
+
+#### Using Hardhat
 
 ```javascript
 const loupe = await ethers.getContractAt("DiamondLoupeFacet", diamondAddress);

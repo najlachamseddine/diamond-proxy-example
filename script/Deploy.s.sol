@@ -7,6 +7,7 @@ import "../contracts/facets/DiamondCutFacet.sol";
 import "../contracts/facets/DiamondLoupeFacet.sol";
 import "../contracts/facets/OwnershipFacet.sol";
 import "../contracts/facets/CounterFacet.sol";
+import "../contracts/facets/Counter2Facet.sol";
 import "../contracts/facets/ERC20Facet.sol";
 import "../contracts/libraries/LibDiamond.sol";
 
@@ -195,7 +196,7 @@ contract DiamondDeployScript is Script {
 
 
     function getSelectorsForCounter2() internal pure returns (bytes4[] memory) {
-        bytes4[] memory selectors = new bytes4[](5);
+        bytes4[] memory selectors = new bytes4[](7);
         selectors[0] = Counter2Facet.getCounter.selector;
         selectors[1] = Counter2Facet.increment.selector;
         selectors[2] = Counter2Facet.decrement.selector;
