@@ -297,6 +297,30 @@ The tool automatically:
 - ✅ Generates ready-to-execute Foundry scripts (AddFacet.s.sol, ReplaceFacet.s.sol, RemoveFacet.s.sol)
 - ✅ Displays function selectors in bytes4 format for verification
 
+#### How It Works
+
+1. **Analyze**: The Python script reads your facet contract's compiled ABI and extracts all function selectors
+2. **Compare**: It queries the deployed Diamond to get currently registered selectors
+3. **Generate**: Based on the comparison, it generates Foundry scripts:
+   - `script/AddFacet.s.sol` - For functions that exist in your facet but not in the Diamond
+   - `script/ReplaceFacet.s.sol` - For functions that exist in both (to update implementation)
+   - `script/RemoveFacet.s.sol` - For functions in the Diamond that are no longer in your facet
+4. **Execute**: You run the generated Foundry scripts to apply the upgrades
+
+```bash
+# Step 1: Analyze and generate upgrade scripts
+python3 scripts/auto_upgrade.py --facet CounterFacet --diamond 0x... --network sepolia
+
+# Step 2: Execute the generated scripts
+DIAMOND_ADDRESS=0x... forge script script/AddFacet.s.sol:AddFacetScript --rpc-url sepolia --broadcast
+DIAMOND_ADDRESS=0x... forge script script/ReplaceFacet.s.sol:ReplaceFacetScript --rpc-url sepolia --broadcast
+```
+
+You can also check for selector conflicts across all facets before deployment:
+```bash
+python3 scripts/auto_upgrade.py --check-conflicts
+```
+
 See [scripts/README.md](./scripts/README.md) for complete documentation.
 
 ### Querying the Diamond (Loupe)
