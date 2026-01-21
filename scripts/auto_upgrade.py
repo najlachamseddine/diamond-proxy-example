@@ -75,7 +75,9 @@ class DiamondUpgrader:
                 text=True,
                 check=True
             )
-            return result.stdout.strip()
+            if capture_output:
+                return result.stdout.strip()
+            return ""
         except subprocess.CalledProcessError as e:
             print(f"Error running command: {' '.join(cmd)}")
             print(f"Error: {e.stderr}")
@@ -494,6 +496,100 @@ contract RemoveFacetScript is Script {{
             return " * (none)"
         return "\n".join([f" * - {sig}" for sig in signatures])
     
+    def check_facet_source_conflicts(self) -> Dict[str, List[Tuple[str, str]]]:
+        """
+        Check for duplicate selectors across all facet source files in contracts/facets/
+        
+        Returns:
+            Dictionary mapping selectors to list of (facet_name, function_signature) tuples
+        """
+        print(f"\n🔍 Checking for selector conflicts across facet source files...")
+        
+        import glob
+        import os
+        
+        # Compile all contracts first
+        print(f"   Compiling contracts...")
+        self.run_command(["forge", "build", "--force"], capture_output=False)
+        
+        # Find all facet files
+        facet_files = glob.glob("contracts/facets/*Facet.sol")
+        print(f"   Found {len(facet_files)} facet files")
+        
+        # Build a mapping of selector -> [(facet_name, function_signature)]
+        selector_to_functions: Dict[str, List[Tuple[str, str]]] = {}
+        
+        for facet_file in facet_files:
+            facet_name = os.path.basename(facet_file).replace(".sol", "")
+            
+            # Read the artifact
+            artifact_path = f"out/{facet_name}.sol/{facet_name}.json"
+            
+            if not os.path.exists(artifact_path):
+                print(f"   ⚠️  Skipping {facet_name} - artifact not found")
+                continue
+            
+            with open(artifact_path, 'r') as f:
+                artifact = json.load(f)
+            
+            abi = artifact.get('abi', [])
+            
+            # Extract functions and their selectors
+            for item in abi:
+                if item["type"] == "function":
+                    # Build function signature
+                    params = ",".join([param["type"] for param in item["inputs"]])
+                    signature = f"{item['name']}({params})"
+                    
+                    # Get selector using cast
+                    selector = self.run_command(["cast", "sig", signature])
+                    
+                    if selector not in selector_to_functions:
+                        selector_to_functions[selector] = []
+                    
+                    selector_to_functions[selector].append((facet_name, signature))
+        
+        # Find conflicts (selectors with multiple implementations)
+        conflicts = {sel: funcs for sel, funcs in selector_to_functions.items() if len(funcs) > 1}
+        
+        # Display results
+        print(f"\n📊 Selector Analysis:")
+        print(f"   Total facets analyzed: {len(facet_files)}")
+        print(f"   Total unique selectors: {len(selector_to_functions)}")
+        print(f"   Conflicts found: {len(conflicts)}")
+        
+        if conflicts:
+            print(f"\n❌ SELECTOR CONFLICTS DETECTED:")
+            print(f"   The following selectors are implemented by multiple facets:")
+            print(f"   This violates EIP-2535 - each selector must be unique!\n")
+            
+            for selector, functions in sorted(conflicts.items()):
+                print(f"   Selector {selector}:")
+                for facet_name, signature in functions:
+                    print(f"      - {facet_name}: {signature}")
+                print()
+        else:
+            print(f"\n✅ No selector conflicts detected!")
+            print(f"   All {len(selector_to_functions)} selectors are unique across facets")
+        
+        # Display all selectors by facet
+        print(f"\n📋 Selectors by Facet:")
+        
+        facet_selectors_map: Dict[str, List[Tuple[str, str]]] = {}
+        for selector, functions in selector_to_functions.items():
+            for facet_name, signature in functions:
+                if facet_name not in facet_selectors_map:
+                    facet_selectors_map[facet_name] = []
+                facet_selectors_map[facet_name].append((selector, signature))
+        
+        for facet_name in sorted(facet_selectors_map.keys()):
+            selectors = facet_selectors_map[facet_name]
+            print(f"\n   {facet_name} ({len(selectors)} functions):")
+            for selector, signature in sorted(selectors, key=lambda x: x[1]):
+                print(f"      {selector} - {signature}")
+        
+        return conflicts
+    
     def execute_upgrades(self, add_action: UpgradeAction, replace_action: UpgradeAction, remove_action: UpgradeAction, auto_execute: bool = False):
         """Execute the generated upgrade scripts"""
         print(f"\n🚀 Executing upgrades...")
@@ -547,6 +643,9 @@ Examples:
   # Analyze CounterFacet and generate upgrade scripts
   python scripts/auto_upgrade.py --facet CounterFacet --diamond 0x5962... --network sepolia
 
+  # Check for selector conflicts across all facet source files
+  python scripts/auto_upgrade.py --check-conflicts
+
   # Analyze and auto-execute upgrades
   python scripts/auto_upgrade.py --facet CounterFacet --diamond 0x5962... --network sepolia --execute
 
@@ -555,15 +654,38 @@ Examples:
         """
     )
     
-    parser.add_argument("--facet", required=True, help="Facet contract name (e.g., CounterFacet)")
-    parser.add_argument("--diamond", required=True, help="Diamond proxy address")
+    parser.add_argument("--facet", help="Facet contract name (e.g., CounterFacet)")
+    parser.add_argument("--diamond", help="Diamond proxy address (required for upgrade analysis)")
     parser.add_argument("--network", default="sepolia", help="Network name or RPC URL (default: sepolia)")
+    parser.add_argument("--check-conflicts", action="store_true", help="Check for duplicate selectors across all facet source files")
     parser.add_argument("--execute", action="store_true", help="Auto-execute the upgrades (default: only generate scripts)")
     parser.add_argument("--private-key", help="Private key (or set PRIVATE_KEY env var)")
     
     args = parser.parse_args()
     
     try:
+        # If check-conflicts mode, just check and exit (no diamond required)
+        if args.check_conflicts:
+            upgrader = DiamondUpgrader(
+                facet_name="ConflictChecker",
+                diamond_address="0x0000000000000000000000000000000000000000",
+                network=args.network,
+                private_key=args.private_key
+            )
+            conflicts = upgrader.check_facet_source_conflicts()
+            if conflicts:
+                print(f"\n❌ Found {len(conflicts)} selector conflict(s)!")
+                sys.exit(1)
+            else:
+                print(f"\n✅ All selectors are unique - no conflicts detected!")
+                sys.exit(0)
+        
+        # Otherwise, require --facet and --diamond for upgrade analysis
+        if not args.facet:
+            parser.error("--facet is required (unless using --check-conflicts)")
+        if not args.diamond:
+            parser.error("--diamond is required (unless using --check-conflicts)")
+        
         # Create upgrader instance
         upgrader = DiamondUpgrader(
             facet_name=args.facet,

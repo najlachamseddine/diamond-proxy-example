@@ -1,8 +1,6 @@
 # Diamond Proxy Pattern Example (EIP-2535)
 
-A comprehensive implementation of the Diamond Proxy Pattern following EIP-2535 best practices.
-
-**Supports both Hardhat (JavaScript) and Foundry (Solidity) workflows.**
+A comprehensive implementation of the Diamond Proxy Pattern following EIP-2535 best practices using **Foundry**.
 
 📖 **Documentation:**
 - **[Foundry Complete Guide →](./FOUNDRY.md)**
@@ -57,22 +55,16 @@ contracts/
     ├── CounterFacet.sol       # Example: Counter functionality
     └── ERC20Facet.sol         # Example: ERC20 token
 scripts/
-├── deploy.js                   # Deployment script
-└── upgrade.js                  # Upgrade example
+├── auto_upgrade.py            # Python automation tool
+└── deploy.js                  # Legacy Hardhat deployment
 test/
-└── Diamond.test.js            # Comprehensive tests
+└── Diamond.t.sol              # Foundry tests
 ```
 
 ## 🚀 Quick Start
 
 ### Installation
 
-#### Using Hardhat (JavaScript/TypeScript)
-```bash
-npm install
-```
-
-#### Using Foundry (Solidity)
 ```bash
 # Install Foundry if you haven't already
 curl -L https://foundry.paradigm.xyz | bash
@@ -84,24 +76,12 @@ forge install foundry-rs/forge-std
 
 ### Compile Contracts
 
-#### Hardhat
-```bash
-npm run compile
-```
-
-#### Foundry
 ```bash
 forge build
 ```
 
 ### Run Tests
 
-#### Hardhat
-```bash
-npm test
-```
-
-#### Foundry
 ```bash
 forge test
 # Run with verbosity
@@ -112,26 +92,17 @@ forge test --gas-report
 
 ### Deploy
 
-#### Hardhat - Deploy Locally
-```bash
-# Start a local node
-npm run node
-
-# In another terminal, deploy
-npm run deploy:local
-```
-
-#### Foundry - Deploy Locally
+#### Deploy Locally
 ```bash
 # Start a local Anvil node
 anvil
 
 # In another terminal, set private key and deploy
-export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+export PRIVATE_KEY=0x...
 forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url localhost --broadcast
 ```
 
-#### Foundry - Deploy to Testnet
+#### Deploy to Testnet
 ```bash
 # Create .env file from example
 cp .env.example .env
@@ -149,7 +120,6 @@ forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url sepolia --broadca
 
 ### Upgrade Diamond
 
-#### Foundry
 ```bash
 # Set the diamond address
 export DIAMOND_ADDRESS=0x...
@@ -161,26 +131,6 @@ forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url localhost --bro
 # Or for testnet
 forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
 ```
-
-#### Hardhat
-```bash
-DIAMOND_ADDRESS=0x... npx hardhat run scripts/upgrade.js --network localhost
-```
-
-## 🔄 Hardhat vs Foundry
-
-| Feature | Hardhat | Foundry |
-|---------|---------|---------|
-| **Language** | JavaScript/TypeScript | Solidity |
-| **Test Speed** | ~500ms | ~2ms (250x faster) |
-| **Gas Reports** | ✅ Via plugins | ✅ Built-in |
-| **Fuzzing** | ❌ External tools | ✅ Native |
-| **Learning Curve** | Easy for JS devs | Easy for Solidity devs |
-| **Ecosystem** | Mature, large | Growing rapidly |
-| **Deployment** | scripts/ folder | script/ folder |
-| **Best For** | Full-stack devs | Smart contract devs |
-
-**Recommendation**: Use Foundry for testing (faster), either for deployment.
 
 ## 🔧 Core Concepts
 
@@ -251,8 +201,6 @@ struct FacetCut {
 
 ### Calling Diamond Functions
 
-#### Using Foundry (cast)
-
 ```bash
 # Set your diamond address
 DIAMOND=0x59624aF30be972C6dbd57Cd89000336a289F7684
@@ -283,24 +231,76 @@ FACET=0xd12347c1FB663275C18c4Db387e58aBF017CeF73
 cast call $FACET "counterFacetNewFunction2()(string)" --rpc-url sepolia
 ```
 
-#### Using Hardhat (JavaScript)
+### Automated Upgrade Analysis
 
-```javascript
-// Get facet interfaces attached to diamond
-const counter = await ethers.getContractAt("CounterFacet", diamondAddress);
-const erc20 = await ethers.getContractAt("ERC20Facet", diamondAddress);
+The project includes a Python automation tool that intelligently analyzes your contracts and generates upgrade scripts:
 
-// Call counter functions
-await counter.increment();
-const value = await counter.getCounter();
-
-// Call ERC20 functions
-await erc20.transfer(recipient, amount);
+```bash
+# Analyze a facet and generate upgrade scripts
+python3 scripts/auto_upgrade.py --facet CounterFacet --diamond 0x59624aF30be972C6dbd57Cd89000336a289F7684 --network sepolia
 ```
 
-### Adding a New Facet
+**Example Output:**
 
-#### Using Foundry
+```
+📝 Analyzing CounterFacet contract...
+   Compiling contracts...
+   Reading artifact from out/CounterFacet.sol/CounterFacet.json
+   Found 6 functions in CounterFacet:
+   - counterFacetNewFunction() → 0x796446af
+   - decrement() → 0x2baeceb7
+   - getCounter() → 0x8ada066e
+   - increment() → 0xd09de08a
+   - incrementBy(uint256) → 0x03df179c
+   - resetCounter() → 0xdbdf7fce
+
+🔄 Determining upgrade actions...
+
+🔍 Querying Diamond at 0x59624aF30be972C6dbd57Cd89000336a289F7684...
+   Found 5 selectors in Diamond
+   Selectors: 0x03df179c, 0x2baeceb7, 0x796446af, 0x8ada066e, 0xd09de08a
+
+📊 Upgrade Summary:
+   ✅ Add:     1 functions
+      - 0xdbdf7fce resetCounter()
+   🔄 Replace: 5 functions
+      - 0x03df179c counterFacetNewFunction()
+      - 0x2baeceb7 decrement()
+      - 0x796446af getCounter()
+      - 0x8ada066e increment()
+      - 0xd09de08a incrementBy(uint256)
+   ❌ Remove:  0 functions
+
+📝 Generating upgrade scripts...
+   ✅ Generated script/AddFacet.s.sol
+   🔄 Generated script/ReplaceFacet.s.sol
+   Generated scripts in script/ directory
+
+🚀 Executing upgrades...
+
+📋 To execute upgrades, run the following commands:
+
+   # Replace functions
+   DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684 forge script script/ReplaceFacet.s.sol:ReplaceFacetScript \
+     --rpc-url sepolia --broadcast
+
+   # Add functions
+   DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684 forge script script/AddFacet.s.sol:AddFacetScript \
+     --rpc-url sepolia --broadcast
+
+✨ Upgrade analysis complete!
+```
+
+The tool automatically:
+- ✅ Compiles your contracts and extracts function selectors
+- ✅ Queries the Diamond to compare current vs. desired state
+- ✅ Determines which functions need to be Added, Replaced, or Removed
+- ✅ Generates ready-to-execute Foundry scripts (AddFacet.s.sol, ReplaceFacet.s.sol, RemoveFacet.s.sol)
+- ✅ Displays function selectors in bytes4 format for verification
+
+See [scripts/README.md](./scripts/README.md) for complete documentation.
+
+### Adding a New Facet
 
 ```bash
 # Deploy and upgrade using the Upgrade script
@@ -314,32 +314,7 @@ forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broad
 cast call $DIAMOND_ADDRESS "counterFacetNewFunction2()(string)" --rpc-url sepolia
 ```
 
-#### Using Hardhat
-
-```javascript
-// Deploy new facet
-const NewFacet = await ethers.getContractFactory("NewFacet");
-const newFacet = await NewFacet.deploy();
-
-// Get selectors
-const selectors = getSelectors(newFacet);
-
-// Execute diamond cut
-const diamondCut = await ethers.getContractAt("DiamondCutFacet", diamondAddress);
-await diamondCut.diamondCut(
-    [{
-        facetAddress: await newFacet.getAddress(),
-        action: 0, // Add
-        functionSelectors: selectors
-    }],
-    ethers.ZeroAddress,
-    "0x"
-);
-```
-
 ### Upgrading a Facet
-
-#### Using Foundry
 
 ```bash
 # Use the upgradeCounterFacet() function in Upgrade.s.sol
@@ -358,28 +333,7 @@ forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broad
 cast call $DIAMOND_ADDRESS "getCounter()(uint256)" --rpc-url sepolia
 ```
 
-#### Using Hardhat
-
-```javascript
-// Deploy updated facet
-const UpdatedFacet = await ethers.getContractFactory("UpdatedCounterFacet");
-const updatedFacet = await UpdatedFacet.deploy();
-
-// Replace functions
-await diamondCut.diamondCut(
-    [{
-        facetAddress: await updatedFacet.getAddress(),
-        action: 1, // Replace
-        functionSelectors: getSelectors(updatedFacet)
-    }],
-    ethers.ZeroAddress,
-    "0x"
-);
-```
-
 ### Removing Functions
-
-#### Using Foundry
 
 ```bash
 # Use the removeFunctions() function in Upgrade.s.sol
@@ -393,23 +347,7 @@ forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broad
 cast call $DIAMOND_ADDRESS "resetCounter()" --rpc-url sepolia
 ```
 
-#### Using Hardhat
-
-```javascript
-await diamondCut.diamondCut(
-    [{
-        facetAddress: ethers.ZeroAddress, // Must be zero for Remove
-        action: 2, // Remove
-        functionSelectors: selectorsToRemove
-    }],
-    ethers.ZeroAddress,
-    "0x"
-);
-```
-
 ### Querying the Diamond (Loupe)
-
-#### Using Foundry
 
 ```bash
 DIAMOND=0x59624aF30be972C6dbd57Cd89000336a289F7684
@@ -430,21 +368,6 @@ cast call $DIAMOND "facetFunctionSelectors(address)(bytes4[])" $FACET_ADDR --rpc
 # Get function signature from selector
 cast sig "counterFacetNewFunction()"
 # Output: 0x12345678... (the bytes4 selector)
-```
-
-#### Using Hardhat
-
-```javascript
-const loupe = await ethers.getContractAt("DiamondLoupeFacet", diamondAddress);
-
-// Get all facets
-const facets = await loupe.facets();
-
-// Get facet for a specific function
-const facetAddress = await loupe.facetAddress(selector);
-
-// Get all functions for a facet
-const selectors = await loupe.facetFunctionSelectors(facetAddress);
 ```
 
 ## 🛡️ Best Practices
