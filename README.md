@@ -118,20 +118,6 @@ forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url sepolia --broadca
 forge script script/Deploy.s.sol:DiamondDeployScript --rpc-url sepolia --broadcast --verify --gas-price 20gwei
 ```
 
-### Upgrade Diamond
-
-```bash
-# Set the diamond address
-export DIAMOND_ADDRESS=0x...
-export PRIVATE_KEY=0x...
-
-# Run upgrade script
-forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url localhost --broadcast
-
-# Or for testnet
-forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
-```
-
 ## 🔧 Core Concepts
 
 ### 1. Diamond Storage (LibDiamond.sol)
@@ -299,53 +285,6 @@ The tool automatically:
 - ✅ Displays function selectors in bytes4 format for verification
 
 See [scripts/README.md](./scripts/README.md) for complete documentation.
-
-### Adding a New Facet
-
-```bash
-# Deploy and upgrade using the Upgrade script
-source .env
-DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
-
-# Run the upgrade script (adds Counter2Facet with new function)
-forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
-
-# Verify the new function was added
-cast call $DIAMOND_ADDRESS "counterFacetNewFunction2()(string)" --rpc-url sepolia
-```
-
-### Upgrading a Facet
-
-```bash
-# Use the upgradeCounterFacet() function in Upgrade.s.sol
-# This replaces existing CounterFacet functions with new implementation
-
-# Edit script/Upgrade.s.sol to enable upgradeCounterFacet():
-# Uncomment: upgradeCounterFacet();
-# Comment out: addNewFacet();
-
-# Run the upgrade
-source .env
-DIAMOND_ADDRESS=0x59624aF30be972C6dbd57Cd89000336a289F7684
-forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
-
-# Verify state is preserved after upgrade
-cast call $DIAMOND_ADDRESS "getCounter()(uint256)" --rpc-url sepolia
-```
-
-### Removing Functions
-
-```bash
-# Use the removeFunctions() function in Upgrade.s.sol
-# Edit script/Upgrade.s.sol to enable removeFunctions():
-# Uncomment: removeFunctions();
-
-# This will remove the resetCounter function from the diamond
-forge script script/Upgrade.s.sol:DiamondUpgradeScript --rpc-url sepolia --broadcast
-
-# Verify function is removed (should fail)
-cast call $DIAMOND_ADDRESS "resetCounter()" --rpc-url sepolia
-```
 
 ### Querying the Diamond (Loupe)
 
