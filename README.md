@@ -53,10 +53,23 @@ contracts/
     ├── DiamondLoupeFacet.sol  # Introspection (query facets)
     ├── OwnershipFacet.sol     # Ownership management
     ├── CounterFacet.sol       # Example: Counter functionality
+    ├── Counter2Facet.sol      # Example: Extended counter
     └── ERC20Facet.sol         # Example: ERC20 token
-scripts/
-├── auto_upgrade.py            # Python automation tool
-└── deploy.js                  # Legacy Hardhat deployment
+
+script/                         # Foundry deployment & upgrade scripts
+├── Deploy.s.sol               # Deploy Diamond with initial facets
+├── Upgrade.s.sol              # Manual upgrade examples
+├── AddFacet.s.sol             # Auto-generated: Add new functions
+├── ReplaceFacet.s.sol         # Auto-generated: Replace existing functions
+├── RemoveFacet.s.sol          # Auto-generated: Remove functions
+└── InteractWithCounter.s.sol  # Example interaction script
+
+scripts/                        # Automation tools
+├── auto_upgrade.py            # Python automation tool for intelligent upgrades
+├── README.md                  # Automation tool documentation
+├── deploy.js                  # Legacy Hardhat deployment
+└── upgrade.js                 # Legacy Hardhat upgrade
+
 test/
 └── Diamond.t.sol              # Foundry tests
 ```
